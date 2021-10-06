@@ -87,13 +87,13 @@ variable "pe_subnet_id" {
 variable "private_dns_zone_name" {
   type        = string
   description = "The Private DNS zone name for a SQL Database Private Endpoint."
-  default     = "privatelink.database.windows.net"
+  default     = ""
 }
 
 variable "private_dns_zone_ids" {
   type        = list(string)
   description = "The Private DNS zone ID for SQL Database Private Link. Defaults to DNS zone deployed in Platform Subscription."
-  default     = ["/subscriptions/foo-sub-bar-id-3c66f7/resourceGroups/rg-foo-01/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net"]
+  default     = ""
 }
 
 
@@ -132,7 +132,6 @@ EOF
 variable "log_analytics_workspace_id" {
   type        = string
   description = "The ID fo the Log Analytics Workspace where SQL logs should be sent."
-  default     = "/subscriptions/foo-sub-bar-id-3c66f7/resourceGroups/rg-foo-01/providers/Microsoft.OperationalInsights/workspaces/logws-InnocentD-uks"
 }
 
 
