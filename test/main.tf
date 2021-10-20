@@ -24,7 +24,7 @@ module "sql_local_test" {
 
   azuread_administrator = {
     login_username = "sql_admin_user"
-    object_id      = "azuread-user-object-ID"
+    object_id      = "21b3fa33-e5ed-438b-91be-3548d0ad9dba"
     tenant_id      = local.tenant_id
   }
 

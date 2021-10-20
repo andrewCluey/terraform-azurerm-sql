@@ -4,10 +4,14 @@ Creates a new SQL Server in Azure, along with any number of databases.
 
 ## Azure AD SQL Administrator
 
+If you wish to deply the new SQL Server with an Azure Active Direcotry user to be the SQL Administratorm then use Version 2.0+ of this module. 
+
+Whenb using any v2 or above version of the module, an additional input parameter block is required.
+
 ```js
   azuread_administrator = {
     login_username = "sql_admin_user"
-    object_id      = "21b3fa33-foo-object-id"
+    object_id      = "21b3fa33-e5ed-438b-91be-3548d0ad9dba"
     tenant_id      = local.tenant_id
   }
 ```
@@ -44,7 +48,7 @@ The `db_name` input parameter is an optional inpout that defines the SQL Databas
 
 EXAMPLE:
 
-```js
+```json
 db_name = {
     db_default_config = {
     },
@@ -84,5 +88,11 @@ Possible configuration options are:
 ### FUTURE ENHANCEMENTS to `db_name`
 
 - `read_replica_count` NOT YET IMPLEMENTED. FUTURE ENHANCEMENT.
+
 - `read_scale` NOT YET IMPLEMENTED. FUTURE ENHANCEMENT.
+
 - `threat_detection_policy` NOT YET IMPLEMENTED. FUTURE ENHANCEMENT
+ 
+## Create SQL Login user
+
+## Example deployment

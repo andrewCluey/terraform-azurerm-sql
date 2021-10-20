@@ -21,6 +21,8 @@ output "sql_server_name" {
   value       = azurerm_mssql_server.sql_svr.name
 }
 
+
+
 output "sql_server_id" {
   description = "The confirmed ID of the SQL server"
   value       = azurerm_mssql_server.sql_svr.id

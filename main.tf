@@ -29,13 +29,13 @@ resource "azurerm_mssql_server" "sql_svr" {
 # Auditing and security vulnerability assesments
 ######################################################
 locals {
-  vulnerability_scan_sa_name = replace(var.sql_server_name, "-", "")
+  vulnerability_scan_sa_name = replace(var.resource_group_name, "-", "")
 }
 
 # Vulnerability scans storage account
 resource "azurerm_storage_account" "sa_sql_vulnerability_scans" {
   count                    = var.enable_vulnerability_scans == true ? 1 : 0
-  name                     = "${local.vulnerability_scan_sa_name}scans"
+  name                     = "${local.vulnerability_scan_sa_name}sql01"
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
@@ -45,7 +45,7 @@ resource "azurerm_storage_account" "sa_sql_vulnerability_scans" {
 # Vulnerability scans storage container
 resource "azurerm_storage_container" "blob_sql_vulnerability_scans" {
   count                 = var.enable_vulnerability_scans == true ? 1 : 0
-  name                  = "${local.vulnerability_scan_sa_name}-scan"
+  name                  = "${var.resource_group_name}-scan"
   storage_account_name  = azurerm_storage_account.sa_sql_vulnerability_scans[0].name
   container_access_type = "private"
 }
@@ -81,22 +81,6 @@ resource "azurerm_mssql_server_extended_auditing_policy" "sql_svr_audit" {
   server_id              = azurerm_mssql_server.sql_svr.id
   log_monitoring_enabled = true
 }
-
-
-/*
-########################################################################################################################
-# Create Azure AD Admin User (Optional)
-########################################################################################################################
-
-resource "azurerm_sql_active_directory_administrator" "sql_aad_admin_user" {
-  count               = var.azuread_administrator == "" ? 0 : 1
-  server_name         = azurerm_mssql_server.sql_svr.name
-  resource_group_name = var.resource_group_name
-  login               = var.azuread_administrator.login_username
-  tenant_id           = var.azuread_administrator.tenant_id
-  object_id           = var.azuread_administrator.object_id
-}
-*/
 
 
 ########################################################################################################################
@@ -140,6 +124,7 @@ resource "azurerm_mssql_firewall_rule" "sql_fw_rules" {
 ########################################################################################################################
 # Create the SQL Databases (using for_each loop)
 ########################################################################################################################
+
 resource "azurerm_mssql_database" "sql_db" {
   for_each = var.db_name
 
@@ -151,7 +136,7 @@ resource "azurerm_mssql_database" "sql_db" {
   sku_name                    = lookup(each.value, "sku_name", "GP_S_Gen5_2")
   auto_pause_delay_in_minutes = lookup(each.value, "auto_pause_delay_in_minutes", "-1")
   zone_redundant              = lookup(each.value, "zone_redundant", true)
-  min_capacity                = lookup(each.value, "min_capacity", "1")
+  min_capacity                = lookup(each.value, "min_capacity", "0.5") # only applies if deploying a serverless database SKU
   max_size_gb                 = lookup(each.value, "max_size_gb", "32") # enhancement required to ignore if create_mode is `secondary`
   collation                   = lookup(each.value, "collation", "SQL_Latin1_General_CP1_CI_AS")
   storage_account_type        = lookup(each.value, "storage_account_type", "GRS")
@@ -169,29 +154,42 @@ resource "azurerm_mssql_database" "sql_db" {
 
 }
 
+# Build the SQL Connection string for each DB created.
 locals {
-  string = {for d in local.dbs : d => "Server=tcp:${local.server_fqdn},1433;Initial Catalog=${d};Persist Security Info=False;User ID={****SQL_USER****};Password={**your_password***};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
-  }
-
   server_fqdn = azurerm_mssql_server.sql_svr.fully_qualified_domain_name
   dbs         = values(azurerm_mssql_database.sql_db)[*].name
-  #connection_strings = zipmap(local.dbs, "Server=tcp:${local.server_fqdn},1433;Initial Catalog=${local.dbs};Persist Security Info=False;User ID=sql_sa;Password={your_password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;")
+  string      = {
+    for d in local.dbs : d => "Server=tcp:${local.server_fqdn},1433;Initial Catalog=${d};Persist Security Info=False;User ID={****SQL_USER****};Password={**your_password***};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  }
 }
 
 resource "azurerm_mssql_database_extended_auditing_policy" "sql_db_auditing" {
-  for_each = azurerm_mssql_database.sql_db
+  for_each               = azurerm_mssql_database.sql_db
   database_id            = each.value.id
   log_monitoring_enabled = true
   retention_in_days      = "7"
 }
 
 
-
 ####################################### Diagnostic Settings ############################################################
 # 
 ########################################################################################################################
+locals {
+    # create a list of all databases that have 'configure_logging' set to TRUE.
+  la_dbs = {
+    for db_key, db in var.db_name : db_key => db
+    if db.configure_logging
+  }
+
+    # Create a map object of all DB config items with 'configure_logging' == TRUE, AFTER the DB has been created.
+  la_db_map = {
+    for db, v in local.la_dbs : db => azurerm_mssql_database.sql_db[db]
+  }
+}
+
+
 resource "azurerm_monitor_diagnostic_setting" "sql_db_diagnostics" {
-  for_each = azurerm_mssql_database.sql_db
+  for_each = local.la_db_map
 
   name                       = "${each.value.name}-DS"
   target_resource_id         = each.value.id

@@ -18,14 +18,24 @@ module "sql_local_test" {
   resource_group_name          = azurerm_resource_group.rg_test.name
   location                     = azurerm_resource_group.rg_test.location
   administrator_login_password = random_password.sql_pass.result
+  log_analytics_workspace_id = "/subscriptions/9a7b4d00-762c-4eaf-aedc-4600943c66f7/resourcegroups/rg-plat-mgmt-01/providers/microsoft.operationalinsights/workspaces/logws-innocentd-uks"
+  
+  azuread_administrator = {
+    login_username = "clureasql"
+    object_id      = "21b3fa33-e5ed-438b-91be-3548d0ad9dba"
+    tenant_id      = "f6faef7b-655c-40b9-bc5c-66903c745772"
+  }
 
   db_name = {
     db_default_config = {
+      configure_logging = false
     },
     db_custom_config = {
-      sku_name       = "Basic"
-      zone_redundant = false
-      max_size_gb    = "1"
+      sku_name          = "GP_Gen5_2"
+      configure_logging = true
+      zone_redundant    = false
+      max_size_gb       = "1"
+      
     }
   }
 

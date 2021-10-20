@@ -39,15 +39,19 @@ variable "administrator_login_password" {
 }
 
 variable "azuread_administrator" {
-  type        = any
+  type        = object({
+    login_username = string
+    object_id      = string
+    tenant_id      = string
+  })
   description = <<EOF
-  Input object to define an Azure AD user account to be the administrator fo the new SQL Server.
+  REQUIRED: Input object to define an Azure AD user account to be the administrator fo the new SQL Server.
   Requires inputs for `login_username`, `object_id` & `tenant_id`.
   EXAMPLE:
   azuread_administrator = {
     login_username = "sql_admin_user"
-    object_id      = "903235-foo-object-id"
-    tenant_id      = "755kblahblahblah40923040"
+    object_id      = "903235-8yicbsdi-4e78yeiugf-8uiu"
+    tenant_id      = "744kjbskf83rn92e80130202040923040"
   }
 EOF
 }
@@ -87,13 +91,13 @@ variable "pe_subnet_id" {
 variable "private_dns_zone_name" {
   type        = string
   description = "The Private DNS zone name for a SQL Database Private Endpoint."
-  default     = ""
+  default     = "privatelink.database.windows.net"
 }
 
 variable "private_dns_zone_ids" {
   type        = list(string)
   description = "The Private DNS zone ID for SQL Database Private Link. Defaults to DNS zone deployed in Platform Subscription."
-  default     = ""
+  default     = ["/subscriptions/9a7b4d00-762c-4eaf-aedc-4600943c66f7/resourceGroups/rg-plat-mgmt-01/providers/Microsoft.Network/privateDnsZones/privatelink.database.windows.net"]
 }
 
 
@@ -101,29 +105,37 @@ variable "db_name" {
   type        = any
   default     = {}
   description = <<EOF
-  An map object where each SQL Database that is needed can be defined. 
+  A map object where each SQL Database that is needed can be defined. 
   Each DB name that is defined will create a new SQL Database. As defaults settings have been defined in the resource code, it is not necessary fior additional parameteres to be added.
 
   However, should you wish to change the default DB configuration, then this can be achieved. Simply add the relevant configuration item into the map object for the db you are creating.
 
   Configurable items include:
+    * configure_logging                 : REQUIRED: Bool value. Must be set for each Database being created. 
     * sku_name                          : "Specifies the SKU used by the DB. Options include 'Basic'; 'ElasticPool'; 'Hyperscale'; 'HS_Gen4_1' & 'GP_S_Gen5_2' (default)."
     * requested_service_objective_name  : 
     * zone_redundant                    :
-    * max_size_bytes                    :
+    * max_size_gb                       :
+    * min_capacity                      : Min number of CPUs (default is 0.5). Only applies when deploying a serverless database SKU. 
     * collation                         :
     * requested_service_objective_id    :
+    * log_analytics_workspace_id        : "Enter in the ID of a Log Analytics workspace if you wish to send diagnostic data for the new DB"
 
   EXAMPLE:
   db_name = {
-    db_default_config = {
+    "db_default_config" = {
+      configure_logging = false
     },
-    db_custom_config = {
-      sku_name                         = "Basic"
-      zone_redundant                   = false
-      max_size_gb                      = "2"
+    "db_custom_config" = {
+      sku_name                   = "Basic"
+      zone_redundant             = false
+      min_capacity               = "1"
+      max_size_gb                = "2"
+      configure_logging          = true
+      la_workspace_id            = "/subscriptions/9a7b4d00-762c-4eaf-aedc-4600943c66f7/resourceGroups/rg-platdr-mgmt-01/providers/Microsoft.OperationalInsights/workspaces/logws-InnocentD-uks"
     }
   }
+}
 
 EOF
 }
@@ -131,7 +143,8 @@ EOF
 
 variable "log_analytics_workspace_id" {
   type        = string
-  description = "The ID fo the Log Analytics Workspace where SQL logs should be sent."
+  description = "The ID fo the Log Analytics Workspace where SQL logs should be sent. Required if any DBs have `configure_logging` set to TRUE."
+  default     = ""
 }
 
 
