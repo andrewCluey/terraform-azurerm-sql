@@ -139,7 +139,7 @@ resource "azurerm_mssql_database" "sql_db" {
   min_capacity                = lookup(each.value, "min_capacity", "0.5") # only applies if deploying a serverless database SKU
   max_size_gb                 = lookup(each.value, "max_size_gb", "32") # enhancement required to ignore if create_mode is `secondary`
   collation                   = lookup(each.value, "collation", "SQL_Latin1_General_CP1_CI_AS")
-  storage_account_type        = lookup(each.value, "storage_account_type", "GRS")
+  storage_account_type        = lookup(each.value, "storage_account_type", "Local")
 
   short_term_retention_policy {
     retention_days = lookup(each.value, "pitr_retention_days", "7")
@@ -170,7 +170,7 @@ resource "azurerm_mssql_database_extended_auditing_policy" "sql_db_auditing" {
   retention_in_days      = "7"
 }
 
-
+/*
 ####################################### Diagnostic Settings ############################################################
 # 
 ########################################################################################################################
@@ -216,5 +216,5 @@ resource "azurerm_monitor_diagnostic_setting" "sql_db_diagnostics" {
     ignore_changes = [log, metric]
   }
 }
-
+*/
 
